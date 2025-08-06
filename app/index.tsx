@@ -1,11 +1,12 @@
-// app/index.tsx
-import { useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Image } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useUser } from '@clerk/clerk-expo';
 
 export default function SplashScreen() {
   const router = useRouter();
-  const scaleAnim = new Animated.Value(0);
+  const { isLoaded, isSignedIn } = useUser();
+  const scaleAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.spring(scaleAnim, {
@@ -14,12 +15,14 @@ export default function SplashScreen() {
       friction: 5,
     }).start();
 
-    const timeout = setTimeout(() => {
-      router.replace('/login');
-    }, 2500);
-
-    return () => clearTimeout(timeout);
-  }, []);
+    if (isLoaded) {
+      if (isSignedIn) {
+        router.replace('/(profile)'); // Nese i loguar, shko direkt ne profil
+      } else {
+        router.replace('/login'); // Nese jo i loguar, shko te login
+      }
+    }
+  }, [isLoaded, isSignedIn]);
 
   return (
     <View style={styles.container}>

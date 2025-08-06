@@ -24,8 +24,8 @@ const LoginScreen = () => {
         resizeMode="contain"
       />
 
-      <TouchableOpacity style={styles.button} onPress={() => router.push('/assessment')}>
-        <Text style={styles.buttonText}>Get Started →</Text>
+      <TouchableOpacity style={styles.button} onPress={() => router.push('/(auth)/sign_up')}>
+        <Text style={styles.buttonText}>Sign Up →</Text>
       </TouchableOpacity>
 
       <TouchableOpacity onPress={() => router.push('./(auth)/sign_in')}>

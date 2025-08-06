@@ -1,296 +1,342 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   ScrollView,
+  Image,
 } from 'react-native';
-import { useUser } from '@clerk/clerk-expo';
-import { useRouter } from 'expo-router';
+import { useUser, useAuth } from '@clerk/clerk-expo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter, useFocusEffect } from 'expo-router';
 
-const accountTypes = ['Psychiatrist', 'Patient', 'Professional'];
-const genders = ['Male', 'Female', 'Trans Female', 'Trans Male', 'Other'];
-const locations = ['Tokyo, Japan', 'New York, USA', 'London, UK', 'Other'];
+const avatars = ['😀', '😎', '😇', '🤓', '🥳', '😜'];
 
 export default function ProfileScreen() {
   const { user } = useUser();
+  const { signOut } = useAuth();
   const router = useRouter();
 
-  const [fullName, setFullName] = useState(user?.fullName || '');
-  const [email] = useState(user?.emailAddresses?.[0]?.emailAddress || '');
-  const [password, setPassword] = useState('**********');
-  const [accountType, setAccountType] = useState('Patient');
+  const [selectedAvatar, setSelectedAvatar] = useState<number | null>(null);
+  const [customImage, setCustomImage] = useState<string | null>(null);
   const [weight, setWeight] = useState(65);
-  const [gender, setGender] = useState('Trans Female');
-  const [location, setLocation] = useState('Tokyo, Japan');
-  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [gender, setGender] = useState('Male');
+  const [wellnessScore, setWellnessScore] = useState<number | null>(null);
+  const [assessmentDone, setAssessmentDone] = useState(false);
+  const [assessmentData, setAssessmentData] = useState<Record<string, string>>({});
+
+  const emailName =
+    user?.emailAddresses?.[0]?.emailAddress?.split('@')[0]?.replace(/^\w/, (c) => c.toUpperCase()) || 'Friend';
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      router.replace('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  const calculateScore = (data: Record<string, string>) => {
+    let score = 0;
+
+    // GOAL
+    switch (data.goal) {
+      case '❤️ I wanna reduce stress': score += 25; break;
+      case '🧠 I wanna try AI Therapy': score += 20; break;
+      case '🕊️ I want to cope with trauma': score += 15; break;
+      case '😊 I want to be a better person': score += 10; break;
+      case '👻 Just trying out the app, mate!': score += 5; break;
+    }
+
+    // MOOD
+    switch (data.mood) {
+      case 'Very Happy': score += 25; break;
+      case 'Happy': score += 20; break;
+      case 'Neutral': score += 15; break;
+      case 'Sad': score += 10; break;
+      case 'Very Sad': score += 5; break;
+    }
+
+    // SLEEP QUALITY
+    switch (data.sleepQuality) {
+      case 'excellent': score += 25; break;
+      case 'good': score += 20; break;
+      case 'fair': score += 15; break;
+      case 'poor': score += 10; break;
+      case 'worst': score += 5; break;
+    }
+
+    // MEDICATION
+    switch (data.medication) {
+      case 'Regularly': score += 25; break;
+      case 'Sometimes': score += 15; break;
+      case 'Rarely': score += 10; break;
+      case 'Never': score += 5; break;
+    }
+
+    return Math.min(score, 100);
+  };
+
+  const loadData = async () => {
+    const avatarIndex = await AsyncStorage.getItem('selectedAvatar');
+    const photoUri = await AsyncStorage.getItem('customPhoto');
+    if (avatarIndex !== null) setSelectedAvatar(parseInt(avatarIndex, 10));
+    if (photoUri) setCustomImage(photoUri);
+
+    const keys = ['goal', 'mood', 'sleepQuality', 'medication', 'gender', 'weight'];
+    const data: Record<string, string> = {};
+    let filledCount = 0;
+
+    for (const key of keys) {
+      const value = await AsyncStorage.getItem(`assessment_${key}`);
+      if (value) {
+        data[key] = value;
+        filledCount++;
+        if (key === 'gender') setGender(value);
+        if (key === 'weight') setWeight(Number(value));
+      }
+    }
+
+    setAssessmentData(data);
+    setAssessmentDone(filledCount >= 3);
+    const score = calculateScore(data);
+    setWellnessScore(score);
+  };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadData();
+    }, [])
+  );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{padding: 20}}>
-      <Text style={styles.headerTitle}>Profile Setup</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.greeting}>Hi {emailName} 👋</Text>
+        <Text style={styles.subGreeting}>Take a deep breath, you're doing great.</Text>
 
-      <View style={styles.photoCircle}>
-        <Text style={{ fontSize: 48 }}>😊</Text>
-      </View>
-
-      <Text style={styles.label}>Full Name</Text>
-      <TextInput
-        style={styles.input}
-        value={fullName}
-        onChangeText={setFullName}
-        placeholder="Enter your full name"
-      />
-
-      <Text style={styles.label}>Email Address</Text>
-      <TextInput
-        style={[styles.input, { backgroundColor: '#f0f0f0' }]}
-        value={email}
-        editable={false}
-      />
-
-      <Text style={styles.label}>Password</Text>
-      <View style={styles.passwordWrapper}>
-        <TextInput
-          style={[styles.input, { flex: 1 }]}
-          value={password}
-          secureTextEntry={!passwordVisible}
-          onChangeText={setPassword}
-        />
-        <TouchableOpacity
-          onPress={() => setPasswordVisible(!passwordVisible)}
-          style={styles.showPasswordBtn}
-        >
-          <Text style={{ color: '#4a3b35' }}>{passwordVisible ? 'Hide' : 'Show'}</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.label}>Account Type</Text>
-      <View style={styles.accountTypeContainer}>
-        {accountTypes.map((type) => (
-          <TouchableOpacity
-            key={type}
-            style={[
-              styles.accountTypeBtn,
-              accountType === type && styles.accountTypeBtnSelected,
-            ]}
-            onPress={() => setAccountType(type)}
-          >
-            <Text
-              style={[
-                styles.accountTypeText,
-                accountType === type && { color: '#fff' },
-              ]}
-            >
-              {type}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <Text style={styles.label}>Weight: {weight} kg</Text>
-      <View style={styles.sliderContainer}>
-        <TouchableOpacity
-          style={styles.sliderBtn}
-          onPress={() => setWeight(Math.max(50, weight - 1))}
-        >
-          <Text style={styles.sliderBtnText}>-</Text>
-        </TouchableOpacity>
-        <View style={styles.weightValueContainer}>
-          <Text style={styles.weightValue}>{weight}</Text>
+        <View style={styles.avatarContainer}>
+          {customImage ? (
+            <Image source={{ uri: customImage }} style={styles.avatarImage} />
+          ) : selectedAvatar !== null ? (
+            <Text style={styles.avatarEmoji}>{avatars[selectedAvatar]}</Text>
+          ) : (
+            <Text style={styles.avatarEmoji}>😊</Text>
+          )}
         </View>
-        <TouchableOpacity
-          style={styles.sliderBtn}
-          onPress={() => setWeight(Math.min(100, weight + 1))}
-        >
-          <Text style={styles.sliderBtnText}>+</Text>
+
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>Your Info</Text>
+
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Gender:</Text>
+            <Text style={styles.infoValue}>{gender}</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Weight:</Text>
+            <Text style={styles.infoValue}>{weight} kg</Text>
+          </View>
+
+          {wellnessScore !== null ? (
+            <View
+              style={[
+                styles.scoreBadge,
+                wellnessScore >= 76
+                  ? styles.scoreHigh
+                  : wellnessScore >= 26
+                  ? styles.scoreMedium
+                  : styles.scoreLow,
+              ]}
+            >
+              <Text style={styles.scoreText}>
+                🌟 Wellness Score: {wellnessScore}/100{' '}
+                {wellnessScore >= 76 ? '💚' : wellnessScore >= 26 ? '⚠️' : '🔴'}
+              </Text>
+            </View>
+          ) : (
+            <Text style={{ color: '#888', marginTop: 6 }}>
+              Complete your assessment to view your wellness score.
+            </Text>
+          )}
+
+          {assessmentDone &&
+            Object.entries(assessmentData).map(([key, value]) => {
+              if (['gender', 'weight'].includes(key)) return null;
+              return (
+                <View style={styles.infoRow} key={key}>
+                  <Text style={styles.infoLabel}>
+                    {key[0].toUpperCase() + key.slice(1)}:
+                  </Text>
+                  <Text style={styles.infoValue}>{String(value)}</Text>
+                </View>
+              );
+            })}
+        </View>
+
+        <Text style={styles.quickAccessTitle}>Quick Access</Text>
+        <View style={styles.quickAccessContainer}>
+          <TouchableOpacity
+            style={styles.quickCard}
+            onPress={() => alert('Start meditation')}
+          >
+            <Text style={styles.cardEmoji}>🧘‍♀️</Text>
+            <Text style={styles.cardText}>Start Meditation</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickCard}
+            onPress={() => router.push('/ProfileSetupScreen')}
+          >
+            <Text style={styles.cardEmoji}>📝</Text>
+            <Text style={styles.cardText}>Edit Profile</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickCard}
+            onPress={() => router.push('/assessment')}
+          >
+            <Text style={styles.cardEmoji}>📋</Text>
+            <Text style={styles.cardText}>Assessment</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.quickCard}
+            onPress={() => alert('Open Journal')}
+          >
+            <Text style={styles.cardEmoji}>💬</Text>
+            <Text style={styles.cardText}>Journal</Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
-      </View>
-
-      <Text style={styles.label}>Gender</Text>
-      <View style={styles.dropdownContainer}>
-        {genders.map((g) => (
-          <TouchableOpacity
-            key={g}
-            style={[
-              styles.dropdownBtn,
-              gender === g && styles.dropdownBtnSelected,
-            ]}
-            onPress={() => setGender(g)}
-          >
-            <Text
-              style={[
-                styles.dropdownText,
-                gender === g && { color: '#fff' },
-              ]}
-            >
-              {g}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <Text style={styles.label}>Location</Text>
-      <View style={styles.dropdownContainer}>
-        {locations.map((loc) => (
-          <TouchableOpacity
-            key={loc}
-            style={[
-              styles.dropdownBtn,
-              location === loc && styles.dropdownBtnSelected,
-            ]}
-            onPress={() => setLocation(loc)}
-          >
-            <Text
-              style={[
-                styles.dropdownText,
-                location === loc && { color: '#fff' },
-              ]}
-            >
-              {loc}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      <TouchableOpacity style={styles.continueBtn} onPress={() => alert('Continue pressed')}>
-        <Text style={styles.continueBtnText}>Continue →</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#f9f8f5',
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
+  safeArea: { flex: 1, backgroundColor: '#f9f8f5' },
+  container: { padding: 20, paddingBottom: 60 },
+  greeting: {
+    fontSize: 26,
+    fontWeight: '700',
     color: '#4a3b35',
-    marginBottom: 10,
+    marginBottom: 4,
   },
-  photoCircle: {
+  subGreeting: {
+    fontSize: 16,
+    color: '#4a3b35',
+    marginBottom: 20,
+  },
+  avatarContainer: {
     alignSelf: 'center',
     backgroundColor: '#e6edd8',
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 18,
+    marginBottom: 24,
   },
-  label: {
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  avatarEmoji: {
+    fontSize: 42,
+  },
+  infoCard: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 16,
+    elevation: 2,
+    marginBottom: 28,
+  },
+  infoTitle: {
+    fontSize: 18,
     fontWeight: '600',
     color: '#4a3b35',
-    marginLeft: 12,
-    marginBottom: 6,
-    fontSize: 16,
+    marginBottom: 12,
   },
-  input: {
-    backgroundColor: 'white',
-    borderColor: '#c1bda9',
-    borderWidth: 1,
-    borderRadius: 30,
-    height: 45,
-    paddingHorizontal: 20,
-    marginBottom: 14,
-    color: '#4a3b35',
-  },
-  passwordWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  showPasswordBtn: {
-    paddingHorizontal: 15,
-  },
-  accountTypeContainer: {
+  infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  accountTypeBtn: {
-    borderWidth: 1,
-    borderColor: '#4a3b35',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    minWidth: 90,
-    alignItems: 'center',
-  },
-  accountTypeBtnSelected: {
-    backgroundColor: '#a9c987',
-    borderColor: '#a9c987',
-  },
-  accountTypeText: {
-    color: '#4a3b35',
-    fontWeight: '600',
-  },
-  sliderContainer: {
-    flexDirection: 'row',
-    marginBottom: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sliderBtn: {
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#4a3b35',
     paddingVertical: 6,
-    paddingHorizontal: 16,
   },
-  sliderBtnText: {
-    fontSize: 18,
-    fontWeight: '600',
+  infoLabel: {
+    fontSize: 15,
+    color: '#4a3b35',
+    fontWeight: '500',
+  },
+  infoValue: {
+    fontSize: 15,
     color: '#4a3b35',
   },
-  weightValueContainer: {
-    marginHorizontal: 20,
-    minWidth: 40,
+  scoreBadge: {
+    marginTop: 12,
+    padding: 10,
+    borderRadius: 12,
     alignItems: 'center',
   },
-  weightValue: {
+  scoreText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#4a3b35',
+    color: '#fff',
   },
-  dropdownContainer: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    flexWrap: 'wrap',
-    gap: 12,
+  scoreHigh: {
+    backgroundColor: '#28a745',
   },
-  dropdownBtn: {
-    borderWidth: 1,
-    borderColor: '#4a3b35',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-    minWidth: 90,
-    alignItems: 'center',
-    marginRight: 10,
+  scoreMedium: {
+    backgroundColor: '#ffc107',
   },
-  dropdownBtnSelected: {
-    backgroundColor: '#a9c987',
-    borderColor: '#a9c987',
+  scoreLow: {
+    backgroundColor: '#dc3545',
   },
-  dropdownText: {
-    color: '#4a3b35',
-    fontWeight: '600',
-  },
-  continueBtn: {
-    backgroundColor: '#4a3b35',
-    borderRadius: 30,
-    paddingVertical: 16,
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  continueBtnText: {
-    fontWeight: '700',
-    color: 'white',
+  quickAccessTitle: {
     fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 10,
+    color: '#4a3b35',
+  },
+  quickAccessContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 14,
+    justifyContent: 'space-between',
+  },
+  quickCard: {
+    width: '47%',
+    backgroundColor: '#e7f0d9',
+    paddingVertical: 18,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  cardEmoji: {
+    fontSize: 28,
+    marginBottom: 6,
+  },
+  cardText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#4a3b35',
+  },
+  logoutBtn: {
+    marginTop: 20,
+    backgroundColor: '#d9534f',
+    paddingVertical: 14,
+    borderRadius: 30,
+    alignItems: 'center',
+  },
+  logoutText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

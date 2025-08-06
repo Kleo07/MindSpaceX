@@ -1,4 +1,3 @@
-// app/(auth)/sign_up.tsx
 import React, { useState } from 'react';
 import {
   View,
@@ -7,7 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  Image
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { AntDesign, MaterialIcons, Ionicons } from '@expo/vector-icons';
@@ -59,6 +58,7 @@ export default function SignUpScreen() {
   if (pendingVerification) {
     return (
       <View style={styles.container}>
+        {/* Back from Verification */}
         <TouchableOpacity onPress={() => setPendingVerification(false)} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#4a3b35" />
         </TouchableOpacity>
@@ -95,6 +95,11 @@ export default function SignUpScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Back from Sign Up */}
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <Ionicons name="arrow-back" size={24} color="#4a3b35" />
+      </TouchableOpacity>
+
       <View style={styles.curvedHeader}>
         <Image source={require('../../assets/images/msx-logo.png')} style={styles.logo} />
       </View>

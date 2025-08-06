@@ -1,12 +1,15 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@clerk/clerk-expo';
 
 export default function SplashScreen() {
   const router = useRouter();
+  const { isSignedIn, isLoaded } = useAuth();
   const scaleAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Animate logo
     Animated.spring(scaleAnim, {
       toValue: 1,
       useNativeDriver: true,
@@ -14,12 +17,19 @@ export default function SplashScreen() {
       tension: 80,
     }).start();
 
+    // Delay and redirect based on auth state
     const timeout = setTimeout(() => {
-      router.replace('/login'); // shkon tek index.tsx
+      if (!isLoaded) return; // Wait until Clerk finishes loading
+
+      if (isSignedIn) {
+        router.replace('/(profile)/ProfileSetupScreen'); // ✅ User is signed in
+      } else {
+        router.replace('/login'); // ❌ Not signed in → go to login
+      }
     }, 2500);
 
     return () => clearTimeout(timeout);
-  }, []);
+  }, [isLoaded, isSignedIn]);
 
   return (
     <View style={styles.container}>

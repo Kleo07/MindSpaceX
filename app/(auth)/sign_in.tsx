@@ -1,37 +1,29 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { useSignIn, useUser } from '@clerk/clerk-expo';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+} from 'react-native';
+import { useSignIn } from '@clerk/clerk-expo';
 import { useRouter } from 'expo-router';
 import { AntDesign, MaterialIcons } from '@expo/vector-icons';
 
 export default function SignInScreen() {
   const router = useRouter();
   const { signIn, setActive, isLoaded } = useSignIn();
-  const { user, isLoaded: userLoaded } = useUser();
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
-  // Nëse përdoruesi është i loguar ridrejto automatikisht
-  useEffect(() => {
-    if (userLoaded && user) {
-      router.replace('/(profile)/ProfileSetupScreen');
-    }
-  }, [user, userLoaded]);
 
   const onSignIn = async () => {
     if (!signIn || !isLoaded) return;
 
     try {
-      // Nëse sesioni ekziston, mos bëj login përsëri
-      if (user) {
-        router.replace('/(profile)');
-        return;
-      }
-
       const result = await signIn.create({ identifier: email, password });
       await setActive({ session: result.createdSessionId });
-      router.replace('/(profile)');
+      router.replace('/(profile)'); // Ridrejto në ekranin e profilit
     } catch (err: any) {
       Alert.alert('Error', err.errors?.[0]?.message || 'Failed to sign in.');
     }
@@ -39,6 +31,7 @@ export default function SignInScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Butoni për shigjetën prapa */}
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
         <AntDesign name="arrowleft" size={24} color="#333" />
       </TouchableOpacity>
@@ -101,7 +94,6 @@ export default function SignInScreen() {
   );
 }
 
-// styles me i njejti si ke pasur
 const styles = StyleSheet.create({
   container: {
     flex: 1,

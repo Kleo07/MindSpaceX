@@ -1,18 +1,34 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  StatusBar,
+} from 'react-native';
 import { useAssessment } from '../context/assessmentsContext';
-import { router } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { AntDesign } from '@expo/vector-icons';
 
 export default function DashboardScreen() {
   const { assessment } = useAssessment();
+  const router = useRouter();
 
-  const formattedEntries = Object.entries(assessment);
+  const formattedEntries = Object.entries(assessment || {});
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FEFAF7" />
+
+      {/* Back button */}
+      <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <AntDesign name="arrowleft" size={26} color="#4a3b35" />
+      </TouchableOpacity>
+
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.circleIcon}>◐</Text>
+        <Text style={styles.circleIcon}></Text>
         <Text style={styles.headerText}>Your Assessment</Text>
         <View style={styles.progressBadge}>
           <Text style={styles.progressText}>Summary</Text>
@@ -36,21 +52,22 @@ export default function DashboardScreen() {
         )}
       </ScrollView>
 
-      {/* Back to Home */}
-      <TouchableOpacity style={styles.button} onPress={() => router.push('/sign_up')}>
-        <Text style={styles.buttonText}>🏠 Sign Up </Text>
+      {/* Button that now goes to Profile */}
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => router.push('/(profile)')}
+      >
+        <Text style={styles.buttonText}>Go to Profile →</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
-// Helper to beautify key names
-const formatKey = (key: string) => {
-  return key
+const formatKey = (key: string) =>
+  key
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, str => str.toUpperCase())
     .trim();
-};
 
 const styles = StyleSheet.create({
   container: {
@@ -59,6 +76,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 60,
     paddingBottom: 30,
+  },
+  backButton: {
+    position: 'absolute',
+    top: 52,
+    left: 20,
+    zIndex: 10,
   },
   header: {
     flexDirection: 'row',

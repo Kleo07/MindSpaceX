@@ -1,10 +1,19 @@
-// app/context/assessmentsContext.tsx
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type AssessmentData = {
+  goal?: string;
+  mood?: string;
+  sleepQuality?: string;
+  medication?: string;
   expressionText?: string;
-  
-  // shto të tjera nëse ke: goal, gender, age, weight, sleepQuality, etj.
+  gender?: string;
+  age?: number;
+  weight?: number;
+  support?: string;
+  distress?: string;
+  symptoms?: string;
+  help?: string;
 };
 
 type AssessmentContextType = {
@@ -16,6 +25,24 @@ const AssessmentContext = createContext<AssessmentContextType | undefined>(undef
 
 export const AssessmentProvider = ({ children }: { children: React.ReactNode }) => {
   const [assessment, setAssessment] = useState<AssessmentData>({});
+
+  useEffect(() => {
+    const persistAssessment = async () => {
+      try {
+        const entries = Object.entries(assessment)
+          .filter(([_, value]) => value !== undefined && value !== null && value !== '')
+          .map(([key, value]) => [`assessment_${key}`, String(value)]);
+
+        if (entries.length > 0) {
+          await AsyncStorage.multiSet(entries as [string, string][]); // ✅ FIXED TYPE
+        }
+      } catch (err) {
+        console.warn('Error saving assessment data:', err);
+      }
+    };
+
+    persistAssessment();
+  }, [assessment]);
 
   return (
     <AssessmentContext.Provider value={{ assessment, setAssessment }}>
