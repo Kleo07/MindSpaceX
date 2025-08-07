@@ -11,6 +11,7 @@ import { useUser, useAuth } from '@clerk/clerk-expo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
+import BottomNavBar from '../components/BottomNavBar';
 
 const avatars = ['😀', '😎', '😇', '🤓', '🥳', '😜'];
 
@@ -42,7 +43,6 @@ export default function ProfileScreen() {
   const calculateScore = (data: Record<string, string>) => {
     let score = 0;
 
-    // GOAL
     switch (data.goal) {
       case '❤️ I wanna reduce stress': score += 25; break;
       case '🧠 I wanna try AI Therapy': score += 20; break;
@@ -51,7 +51,6 @@ export default function ProfileScreen() {
       case '👻 Just trying out the app, mate!': score += 5; break;
     }
 
-    // MOOD
     switch (data.mood) {
       case 'Very Happy': score += 25; break;
       case 'Happy': score += 20; break;
@@ -60,8 +59,7 @@ export default function ProfileScreen() {
       case 'Very Sad': score += 5; break;
     }
 
-    // SLEEP QUALITY
-    switch (data.sleepQuality) {
+    switch (data.sleepQuality?.toLowerCase()) {
       case 'excellent': score += 25; break;
       case 'good': score += 20; break;
       case 'fair': score += 15; break;
@@ -69,7 +67,6 @@ export default function ProfileScreen() {
       case 'worst': score += 5; break;
     }
 
-    // MEDICATION
     switch (data.medication) {
       case 'Regularly': score += 25; break;
       case 'Sometimes': score += 15; break;
@@ -95,15 +92,14 @@ export default function ProfileScreen() {
       if (value) {
         data[key] = value;
         filledCount++;
-        if (key === 'gender') setGender(value);
+        if (key === 'gender') setGender(value.charAt(0).toUpperCase() + value.slice(1).toLowerCase());
         if (key === 'weight') setWeight(Number(value));
       }
     }
 
     setAssessmentData(data);
     setAssessmentDone(filledCount >= 3);
-    const score = calculateScore(data);
-    setWellnessScore(score);
+    setWellnessScore(calculateScore(data));
   };
 
   useFocusEffect(
@@ -165,12 +161,18 @@ export default function ProfileScreen() {
           {assessmentDone &&
             Object.entries(assessmentData).map(([key, value]) => {
               if (['gender', 'weight'].includes(key)) return null;
+
+              const formattedValue =
+                typeof value === 'string'
+                  ? value.charAt(0).toUpperCase() + value.slice(1).toLowerCase()
+                  : value;
+
               return (
                 <View style={styles.infoRow} key={key}>
                   <Text style={styles.infoLabel}>
-                    {key[0].toUpperCase() + key.slice(1)}:
+                    {key.charAt(0).toUpperCase() + key.slice(1)}:
                   </Text>
-                  <Text style={styles.infoValue}>{String(value)}</Text>
+                  <Text style={styles.infoValue}>{formattedValue}</Text>
                 </View>
               );
             })}
@@ -178,34 +180,22 @@ export default function ProfileScreen() {
 
         <Text style={styles.quickAccessTitle}>Quick Access</Text>
         <View style={styles.quickAccessContainer}>
-          <TouchableOpacity
-            style={styles.quickCard}
-            onPress={() => alert('Start meditation')}
-          >
+          <TouchableOpacity style={styles.quickCard} onPress={() => alert('Start meditation')}>
             <Text style={styles.cardEmoji}>🧘‍♀️</Text>
             <Text style={styles.cardText}>Start Meditation</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.quickCard}
-            onPress={() => router.push('/ProfileSetupScreen')}
-          >
+          <TouchableOpacity style={styles.quickCard} onPress={() => router.push('/ProfileSetupScreen')}>
             <Text style={styles.cardEmoji}>📝</Text>
             <Text style={styles.cardText}>Edit Profile</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.quickCard}
-            onPress={() => router.push('/assessment')}
-          >
+          <TouchableOpacity style={styles.quickCard} onPress={() => router.push('/assessment')}>
             <Text style={styles.cardEmoji}>📋</Text>
             <Text style={styles.cardText}>Assessment</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.quickCard}
-            onPress={() => alert('Open Journal')}
-          >
+          <TouchableOpacity style={styles.quickCard} onPress={() => alert('Open Journal')}>
             <Text style={styles.cardEmoji}>💬</Text>
             <Text style={styles.cardText}>Journal</Text>
           </TouchableOpacity>
@@ -215,6 +205,8 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>Log Out</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      
     </SafeAreaView>
   );
 }
@@ -222,17 +214,8 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#f9f8f5' },
   container: { padding: 20, paddingBottom: 60 },
-  greeting: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#4a3b35',
-    marginBottom: 4,
-  },
-  subGreeting: {
-    fontSize: 16,
-    color: '#4a3b35',
-    marginBottom: 20,
-  },
+  greeting: { fontSize: 26, fontWeight: '700', color: '#4a3b35', marginBottom: 4 },
+  subGreeting: { fontSize: 16, color: '#4a3b35', marginBottom: 20 },
   avatarContainer: {
     alignSelf: 'center',
     backgroundColor: '#e6edd8',
@@ -243,14 +226,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
-  avatarImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-  },
-  avatarEmoji: {
-    fontSize: 42,
-  },
+  avatarImage: { width: 80, height: 80, borderRadius: 40 },
+  avatarEmoji: { fontSize: 42 },
   infoCard: {
     backgroundColor: '#fff',
     borderRadius: 14,
@@ -258,52 +235,25 @@ const styles = StyleSheet.create({
     elevation: 2,
     marginBottom: 28,
   },
-  infoTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#4a3b35',
-    marginBottom: 12,
-  },
+  infoTitle: { fontSize: 18, fontWeight: '600', color: '#4a3b35', marginBottom: 12 },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingVertical: 6,
   },
-  infoLabel: {
-    fontSize: 15,
-    color: '#4a3b35',
-    fontWeight: '500',
-  },
-  infoValue: {
-    fontSize: 15,
-    color: '#4a3b35',
-  },
+  infoLabel: { fontSize: 15, color: '#4a3b35', fontWeight: '500' },
+  infoValue: { fontSize: 15, color: '#4a3b35' },
   scoreBadge: {
     marginTop: 12,
     padding: 10,
     borderRadius: 12,
     alignItems: 'center',
   },
-  scoreText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  scoreHigh: {
-    backgroundColor: '#28a745',
-  },
-  scoreMedium: {
-    backgroundColor: '#ffc107',
-  },
-  scoreLow: {
-    backgroundColor: '#dc3545',
-  },
-  quickAccessTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 10,
-    color: '#4a3b35',
-  },
+  scoreText: { fontSize: 16, fontWeight: '600', color: '#fff' },
+  scoreHigh: { backgroundColor: '#28a745' },
+  scoreMedium: { backgroundColor: '#ffc107' },
+  scoreLow: { backgroundColor: '#dc3545' },
+  quickAccessTitle: { fontSize: 18, fontWeight: '600', marginBottom: 10, color: '#4a3b35' },
   quickAccessContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -318,15 +268,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 14,
   },
-  cardEmoji: {
-    fontSize: 28,
-    marginBottom: 6,
-  },
-  cardText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#4a3b35',
-  },
+  cardEmoji: { fontSize: 28, marginBottom: 6 },
+  cardText: { fontSize: 15, fontWeight: '500', color: '#4a3b35' },
   logoutBtn: {
     marginTop: 20,
     backgroundColor: '#d9534f',
@@ -334,9 +277,5 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     alignItems: 'center',
   },
-  logoutText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  logoutText: { color: 'white', fontSize: 16, fontWeight: '600' },
 });

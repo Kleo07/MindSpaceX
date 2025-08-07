@@ -1,9 +1,25 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { router } from 'expo-router';
+import { useAssessment } from '../context/assessmentsContext';
 
 export default function GenderScreen() {
   const [selectedGender, setSelectedGender] = useState<'male' | 'female' | null>(null);
+  const { setAssessment } = useAssessment();
+
+  const handleContinue = () => {
+    if (!selectedGender) {
+      Alert.alert('Please select a gender before continuing.');
+      return;
+    }
+
+    setAssessment(prev => ({
+      ...prev,
+      gender: selectedGender,
+    }));
+
+    router.push('/assessment/age');
+  };
 
   return (
     <View style={styles.container}>
@@ -52,10 +68,7 @@ export default function GenderScreen() {
       </TouchableOpacity>
 
       {/* Continue Button */}
-      <TouchableOpacity
-        style={styles.continueBtn}
-        onPress={() => router.push('/assessment/age')}
-      >
+      <TouchableOpacity style={styles.continueBtn} onPress={handleContinue}>
         <Text style={styles.continueText}>Continue →</Text>
       </TouchableOpacity>
     </View>

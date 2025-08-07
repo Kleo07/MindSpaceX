@@ -174,6 +174,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 30,
     width: '100%',
+    marginBottom: 90,
   },
   continueText: {
     color: '#fff',

@@ -219,6 +219,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: 30,
     marginTop: 'auto',
+    marginBottom: 90,
   },
   continueText: {
     color: '#fff',

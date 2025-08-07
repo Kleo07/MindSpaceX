@@ -152,6 +152,7 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     alignItems: 'center',
     marginTop: 20,
+    marginBottom: 90,
   },
   buttonText: {
     color: '#fff',
