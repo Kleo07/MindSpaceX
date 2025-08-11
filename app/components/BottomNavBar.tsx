@@ -1,12 +1,11 @@
-import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 const tabs = [
-  { label: 'Home', icon: 'home-outline' as const, path: '/' as const },
-  { label: 'Support', icon: 'chatbubble-ellipses-outline' as const, path: '/' as const },
-  { label: 'Learn', icon: 'book-outline' as const, path: '/' as const },
+  { label: 'Home', icon: 'home-outline' as const, path: '/home' as const },
+  { label: 'Support', icon: 'chatbubble-ellipses-outline' as const, path: '/Support' as const },
+  { label: 'Learn', icon: 'book-outline' as const, path: '/learn' as const },
   { label: 'Profile', icon: 'person-outline' as const, path: '/(profile)' as const },
 ];
 
