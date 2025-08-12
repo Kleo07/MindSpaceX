@@ -1,98 +1,85 @@
+// app/assessment/summary.tsx
+import { useRouter } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import {
-  View,
-  Text,
+  ScrollView,
   StyleSheet,
+  Text,
   TouchableOpacity,
-  Animated,
-  Easing,
+  View,
 } from 'react-native';
-import { router } from 'expo-router';
+import { useAssessment } from '../context/assessmentsContext';
 
-export default function FinalPage() {
-  const firework1 = useRef(new Animated.Value(0)).current;
-  const firework2 = useRef(new Animated.Value(0)).current;
-  const firework3 = useRef(new Animated.Value(0)).current;
+export default function SummaryScreen() {
+  const router = useRouter();
+  const { assessment } = useAssessment();
 
-  const triggerFireworks = () => {
-    const animate = (anim: Animated.Value, delay: number) => {
-      Animated.sequence([
-        Animated.timing(anim, {
-          toValue: 1,
-          duration: 400,
-          delay,
-          easing: Easing.out(Easing.exp),
-          useNativeDriver: true,
-        }),
-        Animated.timing(anim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    };
-
-    animate(firework1, 0);
-    animate(firework2, 200);
-    animate(firework3, 400);
-  };
+  // ✅ Ky tip funksionon si në RN (DOM) ashtu edhe në Node env
+  const autosaveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    triggerFireworks();
-  }, []);
+    // Shembull: autosave/log cdo 2s (zëvendësoje me çfarë të duash)
+    autosaveIntervalRef.current = setInterval(() => {
+      // p.sh. mund të bësh send në server ose console.log
+      // console.log('autosave summary', assessment);
+    }, 2000);
 
-  const fireworkStyle = (anim: Animated.Value, x: number, y: number) => ({
-    position: 'absolute' as const,
-    left: x,
-    top: y,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#F6A945',
-    transform: [
-      { scale: anim },
-      {
-        translateY: anim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [0, -50],
-        }),
-      },
-    ],
-    opacity: anim,
-  });
+    return () => {
+      if (autosaveIntervalRef.current) {
+        clearInterval(autosaveIntervalRef.current);
+        autosaveIntervalRef.current = null;
+      }
+    };
+  }, [assessment]);
+
+  const formattedEntries = Object.entries(assessment || {});
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.circleIcon}>◐</Text>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={styles.backIcon}>⬅️</Text>
+        </TouchableOpacity>
         <Text style={styles.headerText}>Assessment</Text>
         <View style={styles.progressBadge}>
-          <Text style={styles.progressText}>15 of 15</Text>
+          <Text style={styles.progressText}>Summary</Text>
         </View>
       </View>
 
-      <Text style={styles.title}>You're All Done 🎉</Text>
-      <Text style={styles.subtitle}>
-        “You are not a drop in the ocean. You are the entire ocean in a drop.” — Rumi
-      </Text>
+      {/* Title */}
+      <Text style={styles.title}>Here’s what you shared:</Text>
 
-      {/* Fireworks */}
-      <View style={styles.fireworkArea}>
-        <Animated.View style={fireworkStyle(firework1, 100, 20)} />
-        <Animated.View style={fireworkStyle(firework2, 180, 60)} />
-        <Animated.View style={fireworkStyle(firework3, 250, 30)} />
-      </View>
+      {/* Summary list */}
+      <ScrollView style={styles.summaryBox}>
+        {formattedEntries.length === 0 ? (
+          <Text style={styles.emptyText}>No responses found.</Text>
+        ) : (
+          formattedEntries.map(([key, value]) => (
+            <View key={key} style={styles.item}>
+              <Text style={styles.itemKey}>{formatKey(key)}</Text>
+              <Text style={styles.itemValue}>{String(value)}</Text>
+            </View>
+          ))
+        )}
+      </ScrollView>
 
-      {/* Done Button */}
+      {/* Continue */}
       <TouchableOpacity
         style={styles.button}
         onPress={() => router.push('/assessment/dashboard')}
       >
-        <Text style={styles.buttonText}>Dashboard</Text>
+        <Text style={styles.buttonText}>Finish</Text>
       </TouchableOpacity>
     </View>
   );
 }
+
+const formatKey = (key: string) =>
+  key
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, (str) => str.toUpperCase())
+    .trim();
 
 const styles = StyleSheet.create({
   container: {
@@ -101,15 +88,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 60,
     paddingBottom: 30,
-    justifyContent: 'space-between',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  circleIcon: {
-    fontSize: 24,
+  backIcon: {
+    fontSize: 22,
     color: '#3e3e3e',
   },
   headerText: {
@@ -128,32 +114,47 @@ const styles = StyleSheet.create({
     color: '#5b4234',
   },
   title: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '700',
     textAlign: 'center',
     color: '#3e2d27',
-    marginTop: 40,
-    marginBottom: 10,
+    marginTop: 20,
+    marginBottom: 20,
   },
-  subtitle: {
+  summaryBox: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 16,
+    elevation: 3,
+  },
+  item: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+    paddingVertical: 10,
+  },
+  itemKey: {
+    fontWeight: '600',
+    fontSize: 14,
+    color: '#555',
+  },
+  itemValue: {
     fontSize: 16,
+    color: '#2e2e2e',
+    marginTop: 4,
+  },
+  emptyText: {
+    color: '#999',
     fontStyle: 'italic',
     textAlign: 'center',
-    color: '#7B7B7B',
-    lineHeight: 24,
-    paddingHorizontal: 10,
-  },
-  fireworkArea: {
-    marginTop: 40,
-    height: 100,
-    position: 'relative',
+    marginTop: 50,
   },
   button: {
     backgroundColor: '#4a3b35',
     paddingVertical: 18,
     borderRadius: 30,
     alignItems: 'center',
-    marginTop: 30,
+    marginTop: 20,
     marginBottom: 90,
   },
   buttonText: {

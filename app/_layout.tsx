@@ -1,11 +1,13 @@
-import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
+// app/_layout.tsx
+import { ClerkProvider, useAuth, useUser } from '@clerk/clerk-expo';
 import { Slot, usePathname } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-import { useWarmUpBrowser } from '../hooks/useWarmUpBrowser';
-import { AssessmentProvider } from './context/assessmentsContext';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useWarmUpBrowser } from '../hooks/useWarmUpBrowser';
 import BottomNavBar from './components/BottomNavBar';
-import { useEffect, useState } from 'react';
+import AssessmentProvider from './context/assessmentsContext'; // default export
+import React from 'react';
+import { useApi } from '../utils/api';
 
 const tokenCache = {
   getToken: (key: string) => SecureStore.getItemAsync(key),
@@ -15,15 +17,28 @@ const tokenCache = {
 function LayoutWrapper() {
   const { isSignedIn } = useAuth();
   const pathname = usePathname();
-
   const showNavBar = isSignedIn && pathname !== '/splash';
-
   return (
     <>
       <Slot />
       {showNavBar && <BottomNavBar />}
     </>
   );
+}
+
+// Ensure per-user sync happens after login
+function SyncOnLogin() {
+  const { isSignedIn } = useAuth();
+  const { user, isLoaded } = useUser();
+  const { syncOnLogin } = useApi();
+
+  React.useEffect(() => {
+    if (isLoaded && isSignedIn && user?.id) {
+      syncOnLogin();
+    }
+  }, [isLoaded, isSignedIn, user?.id]);
+
+  return null;
 }
 
 export default function RootLayout() {
@@ -37,6 +52,7 @@ export default function RootLayout() {
     >
       <AssessmentProvider>
         <SafeAreaProvider>
+          <SyncOnLogin />
           <LayoutWrapper />
         </SafeAreaProvider>
       </AssessmentProvider>
