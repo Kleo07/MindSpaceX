@@ -1,8 +1,34 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+// app/assessment/ai.tsx
 import { router } from 'expo-router';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useApi } from '../../utils/api';
+import { useAssessment } from '../context/assessmentsContext';
 
 export default function SoundAnalysisScreen() {
+  const { setAssessment } = useAssessment();
+  const { saveAssessmentStep } = useApi();
+
+  const handleContinue = async () => {
+    // ✅ Save in context (your provider persists this to AsyncStorage)
+    setAssessment(prev => ({
+      ...prev,
+      ai: 'consented', // <-- use allowed key
+    }));
+
+    // ✅ Save to server with allowed keys
+    try {
+      await saveAssessmentStep('ai', 'consented');
+      // optional: also log the phrase in 'summary' if you want to record it
+      // await saveAssessmentStep('summary', 'I believe in Dr. Freud, with all my heart.');
+    } catch {
+      // non-blocking: ignore network errors
+    }
+
+    // ➡️ Next step
+    router.push('/assessment/expression');
+  };
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -19,7 +45,7 @@ export default function SoundAnalysisScreen() {
 
       {/* Subtitle */}
       <Text style={styles.subtitle}>
-        Please say the following words below. Don’t{"\n"}worry, we don’t steal your voice data.
+        Please say the following words below. Don’t{'\n'}worry, we don’t steal your voice data.
       </Text>
 
       {/* Concentric Circles */}
@@ -35,15 +61,11 @@ export default function SoundAnalysisScreen() {
         <View style={styles.highlightBox}>
           <Text style={styles.highlightText}>I believe in</Text>
         </View>
-        <Text style={styles.restText}> Dr. Freud,with all my heart.</Text>
+        <Text style={styles.restText}> Dr. Freud, with all my heart.</Text>
       </View>
-      
 
       {/* Continue Button */}
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => router.push('/assessment/expression')}
-      >
+      <TouchableOpacity style={styles.button} onPress={handleContinue}>
         <Text style={styles.buttonText}>Continue →</Text>
       </TouchableOpacity>
     </View>

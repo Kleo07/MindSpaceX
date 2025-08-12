@@ -1,25 +1,30 @@
+// app/assessment/help.tsx
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Alert,
+  Image,
   StyleSheet,
   Text,
-  View,
   TouchableOpacity,
-  Image,
+  View,
 } from 'react-native';
-import { router } from 'expo-router';
 import { useAssessment } from '../context/assessmentsContext';
 
-const HelpScreen = () => {
+export default function HelpScreen() {
   const [selected, setSelected] = useState<'yes' | 'no' | null>(null);
   const { setAssessment } = useAssessment();
 
   const handleContinue = () => {
-    if (selected) {
-      setAssessment((prev) => ({ ...prev, helpBefore: selected }));
-      router.push('/assessment/distress');
-    } else {
-      alert('Please select Yes or No');
+    if (!selected) {
+      Alert.alert('Please select Yes or No');
+      return;
     }
+
+    // ✅ RUHET me çelësin e saktë "help"
+    setAssessment(prev => ({ ...prev, help: selected }));
+
+    router.push('/assessment/distress');
   };
 
   return (
@@ -50,35 +55,19 @@ const HelpScreen = () => {
       {/* Options */}
       <View style={styles.optionRow}>
         <TouchableOpacity
-          style={[
-            styles.optionButton,
-            selected === 'yes' && styles.optionSelected,
-          ]}
+          style={[styles.optionButton, selected === 'yes' && styles.optionSelected]}
           onPress={() => setSelected('yes')}
         >
-          <Text
-            style={[
-              styles.optionText,
-              selected === 'yes' && styles.optionTextSelected,
-            ]}
-          >
+          <Text style={[styles.optionText, selected === 'yes' && styles.optionTextSelected]}>
             Yes
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[
-            styles.optionButton,
-            selected === 'no' && styles.optionSelected,
-          ]}
+          style={[styles.optionButton, selected === 'no' && styles.optionSelected]}
           onPress={() => setSelected('no')}
         >
-          <Text
-            style={[
-              styles.optionText,
-              selected === 'no' && styles.optionTextSelected,
-            ]}
-          >
+          <Text style={[styles.optionText, selected === 'no' && styles.optionTextSelected]}>
             No
           </Text>
         </TouchableOpacity>
@@ -90,9 +79,7 @@ const HelpScreen = () => {
       </TouchableOpacity>
     </View>
   );
-};
-
-export default HelpScreen;
+}
 
 const styles = StyleSheet.create({
   container: {

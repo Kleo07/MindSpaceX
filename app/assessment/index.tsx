@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { router } from 'expo-router';
-import { useAssessment } from '../context/assessmentsContext';
+import React, { useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import type { AssessmentData } from '../context/assessmentsContext';
+import { useAssessment } from '../context/assessmentsContext';
 
 const options = [
   { id: 1, label: '❤️ I wanna reduce stress' },
@@ -19,7 +19,13 @@ export default function AssessmentHome() {
   const handleContinue = () => {
     if (selectedOption !== null) {
       const selectedLabel = options.find(o => o.id === selectedOption)?.label || '';
-      setAssessment((prev: AssessmentData) => ({ ...prev, goal: selectedLabel }));
+      
+      // Ruajmë tek konteksti
+      setAssessment((prev: AssessmentData) => ({
+        ...prev,
+        goal: selectedLabel, // key ekzistues
+      }));
+
       router.push('/assessment/gender');
     }
   };

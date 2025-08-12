@@ -1,55 +1,64 @@
 // app/assessment/mood.tsx
-import React, { useState, useRef } from 'react';
+import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
+import React, { useRef, useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
   Animated,
   Dimensions,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { router } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useApi } from '../../utils/api';
 import { useAssessment } from '../context/assessmentsContext';
 
 const moods = [
   { emoji: '😢', label: 'Very Sad', color: '#D96E28' },
-  { emoji: '🙁', label: 'Sad', color: '#F89C2B' },
-  { emoji: '😐', label: 'Neutral', color: '#FCD653' },
-  { emoji: '🙂', label: 'Happy', color: '#B6D67B' },
+  { emoji: '🙁', label: 'Sad',      color: '#F89C2B' },
+  { emoji: '😐', label: 'Neutral',  color: '#FCD653' },
+  { emoji: '🙂', label: 'Happy',    color: '#B6D67B' },
   { emoji: '😄', label: 'Very Happy', color: '#A7A2F5' },
 ];
 
 const MoodScreen = () => {
   const [selectedIndex, setSelectedIndex] = useState(2);
+  const [submitting, setSubmitting] = useState(false);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const insets = useSafeAreaInsets();
-  const { setAssessment } = useAssessment(); // ✅ Përdor context siç duhet
+  const { setAssessment } = useAssessment();
+  const { saveAssessmentStep } = useApi();
 
   const onSelect = (index: number) => {
+    Haptics.selectionAsync();
     Animated.sequence([
-      Animated.timing(scaleAnim, {
-        toValue: 1.15,
-        duration: 150,
-        useNativeDriver: true,
-      }),
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }),
+      Animated.timing(scaleAnim, { toValue: 1.15, duration: 150, useNativeDriver: true }),
+      Animated.timing(scaleAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
     ]).start();
     setSelectedIndex(index);
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+
+    const chosen = moods[selectedIndex];
+    // Update context (provider persists to AsyncStorage)
     setAssessment(prev => ({
       ...prev,
-      mood: moods[selectedIndex].label,
-      moodEmoji: moods[selectedIndex].emoji,
+      mood: chosen.label,
+      moodEmoji: chosen.emoji,
       moodIndex: selectedIndex,
     }));
+
+    // Fire-and-forget server save (doesn't block UX)
+    try {
+      await saveAssessmentStep('mood', chosen.label);
+    } catch (_) {}
+
     router.push('/assessment/help');
+    setSubmitting(false);
   };
 
   return (
@@ -78,7 +87,7 @@ const MoodScreen = () => {
       <View style={styles.dialContainer}>
         {moods.map((mood, index) => (
           <TouchableOpacity
-            key={index}
+            key={mood.label}
             style={[
               styles.moodSegment,
               {
@@ -87,7 +96,9 @@ const MoodScreen = () => {
               },
             ]}
             onPress={() => onSelect(index)}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={`Mood ${mood.label}`}
           >
             <Text style={styles.segmentEmoji}>{mood.emoji}</Text>
           </TouchableOpacity>
@@ -95,7 +106,7 @@ const MoodScreen = () => {
       </View>
 
       {/* Continue Button */}
-      <TouchableOpacity style={styles.button} onPress={handleContinue}>
+      <TouchableOpacity style={[styles.button, submitting && { opacity: 0.6 }]} onPress={handleContinue} disabled={submitting}>
         <Text style={styles.buttonText}>Continue →</Text>
       </TouchableOpacity>
     </SafeAreaView>

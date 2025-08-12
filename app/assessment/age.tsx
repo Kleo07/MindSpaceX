@@ -1,19 +1,42 @@
+// app/assessment/age.tsx
+import { router } from 'expo-router';
+import React, { useRef, useState } from 'react';
 import {
+  Dimensions,
+  FlatList,
   StyleSheet,
   Text,
-  View,
-  FlatList,
-  Dimensions,
   TouchableOpacity,
+  View,
 } from 'react-native';
-import React, { useState, useRef } from 'react';
-import { router } from 'expo-router';
+import { useApi } from '../../utils/api';
+import { useAssessment } from '../context/assessmentsContext';
 
 const AgeScreen = () => {
   const [selectedAge, setSelectedAge] = useState<number>(18);
-  const ageRange = Array.from({ length: 100 }, (_, i) => i + 10); // 10 to 109
+  const ageRange = Array.from({ length: 100 }, (_, i) => i + 10); // 10..109
   const ITEM_HEIGHT = 60;
-  const flatListRef = useRef<FlatList>(null);
+  const flatListRef = useRef<FlatList<number>>(null);
+
+  // context + api
+  const { setAssessment } = useAssessment();
+  const { saveAssessmentStep } = useApi();
+
+  const onContinue = async () => {
+    // 1) Update context (this also persists to AsyncStorage from your provider)
+    setAssessment(prev => ({ ...prev, age: selectedAge }));
+
+    // 2) Optionally send to server (safe to keep here; it’s fire-and-forget)
+    try {
+      await saveAssessmentStep('age', selectedAge);
+    } catch (e) {
+      // don’t block navigation if server is down
+      console.log('saveAssessmentStep(age) failed:', e);
+    }
+
+    // 3) Next screen
+    router.push('/assessment/weight');
+  };
 
   return (
     <View style={styles.container}>
@@ -50,22 +73,19 @@ const AgeScreen = () => {
           const index = Math.round(
             event.nativeEvent.contentOffset.y / ITEM_HEIGHT
           );
-          setSelectedAge(ageRange[index]);
+          const val = ageRange[Math.max(0, Math.min(ageRange.length - 1, index))];
+          if (val) setSelectedAge(val);
         }}
         style={{ flexGrow: 0 }}
         contentContainerStyle={{
-          paddingTop:
-            Dimensions.get('window').height / 2 - ITEM_HEIGHT * 2.5,
-          paddingBottom:
-            Dimensions.get('window').height / 2 - ITEM_HEIGHT * 2.5,
+          paddingTop: Dimensions.get('window').height / 2 - ITEM_HEIGHT * 2.5,
+          paddingBottom: Dimensions.get('window').height / 2 - ITEM_HEIGHT * 2.5,
         }}
         renderItem={({ item }) => {
           const isSelected = item === selectedAge;
           return (
             <View style={[styles.item, isSelected && styles.selectedItem]}>
-              <Text
-                style={[styles.itemText, isSelected && styles.selectedText]}
-              >
+              <Text style={[styles.itemText, isSelected && styles.selectedText]}>
                 {item}
               </Text>
             </View>
@@ -74,13 +94,7 @@ const AgeScreen = () => {
       />
 
       {/* Continue Button */}
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => {
-          console.log('Selected age:', selectedAge);
-          router.push('/assessment/weight');
-        }}
-      >
+      <TouchableOpacity style={styles.button} onPress={onContinue}>
         <Text style={styles.buttonText}>Continue →</Text>
       </TouchableOpacity>
     </View>

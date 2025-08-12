@@ -1,23 +1,23 @@
-import React, { useRef, useState, useEffect } from 'react';
+// app/assessment/sleepquality.tsx
+import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  Dimensions,
   Animated,
   PanResponder,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View,
 } from 'react-native';
-import { router } from 'expo-router';
 import { useAssessment } from '../context/assessmentsContext';
-import * as Haptics from 'expo-haptics';
 
 const sleepLevels = [
   { label: 'Excellent', hours: '7–9 HOURS', emoji: '😊', color: '#84C784' },
-  { label: 'Good', hours: '6–7 HOURS', emoji: '🙂', color: '#FFD76A' },
-  { label: 'Fair', hours: '5 HOURS', emoji: '😐', color: '#C1A192' },
-  { label: 'Poor', hours: '3–4 HOURS', emoji: '😟', color: '#FF914D' },
-  { label: 'Worst', hours: '<3 HOURS', emoji: '😵', color: '#A48BE0' },
+  { label: 'Good',      hours: '6–7 HOURS', emoji: '🙂', color: '#FFD76A' },
+  { label: 'Fair',      hours: '5 HOURS',   emoji: '😐', color: '#C1A192' },
+  { label: 'Poor',      hours: '3–4 HOURS', emoji: '😟', color: '#FF914D' },
+  { label: 'Worst',     hours: '<3 HOURS',  emoji: '😵', color: '#A48BE0' },
 ];
 
 const TRACK_HEIGHT = 300;
@@ -28,15 +28,14 @@ export default function SleepQualityScreen() {
   const [selectedIndex, setSelectedIndex] = useState(3);
   const position = useRef(new Animated.Value(ITEM_HEIGHT * 3)).current;
 
-  // Sync selectedIndex while dragging
+  // Update selectedIndex while dragging
   useEffect(() => {
-    const listener = position.addListener(({ value }) => {
+    const id = position.addListener(({ value }) => {
       const liveIndex = Math.round(value / ITEM_HEIGHT);
-      if (liveIndex !== selectedIndex) {
-        setSelectedIndex(Math.max(0, Math.min(sleepLevels.length - 1, liveIndex)));
-      }
+      const clamped = Math.max(0, Math.min(sleepLevels.length - 1, liveIndex));
+      if (clamped !== selectedIndex) setSelectedIndex(clamped);
     });
-    return () => position.removeListener(listener);
+    return () => position.removeListener(id);
   }, [position, selectedIndex]);
 
   const panResponder = useRef(
@@ -47,20 +46,22 @@ export default function SleepQualityScreen() {
         position.setValue(newY);
       },
       onPanResponderRelease: () => {
-        const finalIndex = Math.round((position as any)._value / ITEM_HEIGHT);
+        // snap to nearest option
+        // @ts-ignore private _value is fine here for snap
+        const finalIndex = Math.round(position._value / ITEM_HEIGHT);
         const clampedIndex = Math.max(0, Math.min(sleepLevels.length - 1, finalIndex));
         Animated.spring(position, {
           toValue: clampedIndex * ITEM_HEIGHT,
           useNativeDriver: false,
         }).start();
-        Haptics.selectionAsync(); // Vibrim i lehtë në përfundim
+        Haptics.selectionAsync();
       },
     })
   ).current;
 
   const handleContinue = () => {
-    const quality = sleepLevels[selectedIndex].label.toLowerCase();
-    setAssessment((prev) => ({ ...prev, sleepQuality: quality }));
+    const quality = sleepLevels[selectedIndex].label; // Keep Title Case
+    setAssessment(prev => ({ ...prev, sleepQuality: quality }));
     router.push('/assessment/medication');
   };
 
@@ -85,7 +86,7 @@ export default function SleepQualityScreen() {
         {/* Labels */}
         <View style={styles.labelsColumn}>
           {sleepLevels.map((item, index) => (
-            <View key={index} style={[styles.labelRow, { height: ITEM_HEIGHT }]}>
+            <View key={item.label} style={[styles.labelRow, { height: ITEM_HEIGHT }]}>
               <Text style={[styles.labelText, selectedIndex === index && styles.labelTextActive]}>
                 {item.label}
               </Text>
@@ -96,7 +97,7 @@ export default function SleepQualityScreen() {
           ))}
         </View>
 
-        {/* Track */}
+        {/* Track + Thumb */}
         <View style={styles.sliderTrackContainer}>
           <View style={styles.sliderTrack} />
           <Animated.View
@@ -104,6 +105,7 @@ export default function SleepQualityScreen() {
             style={[
               styles.sliderThumb,
               {
+                // @ts-ignore Animated.subtract number ok here
                 top: Animated.subtract(position, 20),
                 backgroundColor: sleepLevels[selectedIndex].color,
               },
@@ -114,7 +116,7 @@ export default function SleepQualityScreen() {
         {/* Emojis */}
         <View style={styles.emojisColumn}>
           {sleepLevels.map((item, index) => (
-            <View key={index} style={[styles.emojiRow, { height: ITEM_HEIGHT }]}>
+            <View key={item.emoji + index} style={[styles.emojiRow, { height: ITEM_HEIGHT }]}>
               <Text style={[styles.emojiText, selectedIndex === index && styles.emojiActive]}>
                 {item.emoji}
               </Text>
@@ -145,25 +147,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 20,
   },
-  backIcon: {
-    fontSize: 22,
-    color: '#3e3e3e',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#3e3e3e',
-  },
+  backIcon: { fontSize: 22, color: '#3e3e3e' },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: '#3e3e3e' },
   progressBadge: {
     backgroundColor: '#f3e5db',
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 15,
   },
-  progressText: {
-    fontSize: 12,
-    color: '#5b4234',
-  },
+  progressText: { fontSize: 12, color: '#5b4234' },
   title: {
     fontSize: 24,
     fontWeight: '700',
@@ -171,32 +163,13 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     color: '#422B20',
   },
-  sliderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  labelsColumn: {
-    flex: 1.3,
-  },
-  labelRow: {
-    justifyContent: 'center',
-  },
-  labelText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#B6B6B6',
-  },
-  labelTextActive: {
-    color: '#422B20',
-  },
-  hourText: {
-    fontSize: 12,
-    color: '#C1C1C1',
-  },
-  hourTextActive: {
-    color: '#422B20',
-  },
+  sliderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  labelsColumn: { flex: 1.3 },
+  labelRow: { justifyContent: 'center' },
+  labelText: { fontSize: 16, fontWeight: '600', color: '#B6B6B6' },
+  labelTextActive: { color: '#422B20' },
+  hourText: { fontSize: 12, color: '#C1C1C1' },
+  hourTextActive: { color: '#422B20' },
   sliderTrackContainer: {
     width: 20,
     height: TRACK_HEIGHT,
@@ -205,12 +178,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     position: 'relative',
   },
-  sliderTrack: {
-    width: 6,
-    height: '100%',
-    backgroundColor: '#E5DCD9',
-    borderRadius: 3,
-  },
+  sliderTrack: { width: 6, height: '100%', backgroundColor: '#E5DCD9', borderRadius: 3 },
   sliderThumb: {
     position: 'absolute',
     left: -12,
@@ -221,30 +189,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 6,
   },
-  emojisColumn: {
-    flex: 1,
-  },
-  emojiRow: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emojiText: {
-    fontSize: 24,
-    opacity: 0.4,
-  },
-  emojiActive: {
-    opacity: 1,
-  },
+  emojisColumn: { flex: 1 },
+  emojiRow: { justifyContent: 'center', alignItems: 'center' },
+  emojiText: { fontSize: 24, opacity: 0.4 },
+  emojiActive: { opacity: 1 },
   button: {
     backgroundColor: '#4a3b35',
     paddingVertical: 16,
     borderRadius: 30,
     alignItems: 'center',
     marginTop: 30,
+    marginBottom: 90, // ← për të mos u mbuluar nga nav bar-i
   },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 16,
-  },
+  buttonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
 });

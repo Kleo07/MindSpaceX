@@ -1,23 +1,38 @@
-import React, { useState, useRef } from 'react';
+// app/assessment/medication.tsx
+import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
+import React, { useRef, useState } from 'react';
 import {
-  StyleSheet,
-  Text,
-  View,
-  TouchableOpacity,
   Animated,
   Dimensions,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { router } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as Haptics from 'expo-haptics';
 import { useAssessment } from '../context/assessmentsContext';
 
-const frequencies = [
+const uiFrequencies = [
   { label: 'Daily', emoji: '📅', color: '#A7D676' },
   { label: 'Few times a week', emoji: '🗓️', color: '#FCD653' },
   { label: 'Occasionally', emoji: '⏱️', color: '#F89C2B' },
   { label: 'Not sure', emoji: '❓', color: '#D96E28' },
 ];
+
+// Map UI -> values që i kupton kalkulimi i score-it në profil
+const mapToScoreValue = (label: string): 'Regularly' | 'Sometimes' | 'Rarely' | 'Never' => {
+  switch (label) {
+    case 'Daily':
+      return 'Regularly';
+    case 'Few times a week':
+      return 'Sometimes';
+    case 'Occasionally':
+      return 'Rarely';
+    default:
+      return 'Never'; // "Not sure" -> "Never" që të mos ngecë në 0
+  }
+};
 
 const MedicationFrequencyScreen = () => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -28,26 +43,21 @@ const MedicationFrequencyScreen = () => {
   const onSelect = (index: number) => {
     Haptics.selectionAsync();
     Animated.sequence([
-      Animated.spring(scaleAnim, {
-        toValue: 1.15,
-        friction: 4,
-        useNativeDriver: true,
-      }),
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        friction: 4,
-        useNativeDriver: true,
-      }),
+      Animated.spring(scaleAnim, { toValue: 1.15, friction: 4, useNativeDriver: true }),
+      Animated.spring(scaleAnim, { toValue: 1, friction: 4, useNativeDriver: true }),
     ]).start();
     setSelectedIndex(index);
   };
 
   const handleContinue = () => {
-    if (selectedIndex !== null) {
-      const label = frequencies[selectedIndex].label.toLowerCase();
-      setAssessment((prev) => ({ ...prev, medicationFrequency: label }));
-      router.push('/assessment/symptoms');
-    }
+    if (selectedIndex === null) return;
+    const uiLabel = uiFrequencies[selectedIndex].label;
+    const valueForScore = mapToScoreValue(uiLabel);
+
+    // 🔐 Ruaje te "medication" (kyçi që përdor profili për score)
+    setAssessment(prev => ({ ...prev, medication: valueForScore }));
+
+    router.push('/assessment/symptoms');
   };
 
   return (
@@ -71,24 +81,17 @@ const MedicationFrequencyScreen = () => {
       {/* Question */}
       <Text style={styles.title}>How often do you take them?</Text>
       {selectedIndex !== null && (
-        <Text style={styles.subtitle}>
-          Selected: {frequencies[selectedIndex].label}
-        </Text>
+        <Text style={styles.subtitle}>Selected: {uiFrequencies[selectedIndex].label}</Text>
       )}
 
       {/* Big Emoji */}
-      <Animated.Text
-        style={[
-          styles.bigEmoji,
-          { transform: [{ scale: scaleAnim }] },
-        ]}
-      >
-        {selectedIndex !== null ? frequencies[selectedIndex].emoji : '💊'}
+      <Animated.Text style={[styles.bigEmoji, { transform: [{ scale: scaleAnim }] }]}>
+        {selectedIndex !== null ? uiFrequencies[selectedIndex].emoji : '💊'}
       </Animated.Text>
 
-      {/* Option Selector */}
+      {/* Options */}
       <View style={styles.dialContainer}>
-        {frequencies.map((item, index) => {
+        {uiFrequencies.map((item, index) => {
           const isSelected = index === selectedIndex;
           return (
             <TouchableOpacity
@@ -98,24 +101,22 @@ const MedicationFrequencyScreen = () => {
                 {
                   backgroundColor: item.color,
                   transform: [{ scale: isSelected ? 1.2 : 1 }],
-                  opacity: isSelected ? 1 : 0.8,
+                  opacity: isSelected ? 1 : 0.85,
                 },
               ]}
               onPress={() => onSelect(index)}
               activeOpacity={0.9}
             >
               <Text style={styles.segmentEmoji}>{item.emoji}</Text>
+              <Text style={styles.segmentLabel}>{item.label}</Text>
             </TouchableOpacity>
           );
         })}
       </View>
 
-      {/* Continue Button */}
+      {/* Continue */}
       <TouchableOpacity
-        style={[
-          styles.button,
-          { opacity: selectedIndex !== null ? 1 : 0.5 },
-        ]}
+        style={[styles.button, { opacity: selectedIndex !== null ? 1 : 0.5 }]}
         onPress={handleContinue}
         disabled={selectedIndex === null}
       >
@@ -128,7 +129,7 @@ const MedicationFrequencyScreen = () => {
 export default MedicationFrequencyScreen;
 
 const { width } = Dimensions.get('window');
-const segmentWidth = width * 0.16;
+const segmentWidth = width * 0.2;
 
 const styles = StyleSheet.create({
   container: {
@@ -181,22 +182,31 @@ const styles = StyleSheet.create({
   },
   dialContainer: {
     flexDirection: 'row',
-    width: '90%',
+    width: '92%',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
     marginBottom: 20,
+    flexWrap: 'wrap',
+    gap: 12,
   },
   moodSegment: {
     width: segmentWidth,
-    height: segmentWidth * 1.6,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    height: segmentWidth * 1.3,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
+    elevation: 3,
+    paddingHorizontal: 6,
   },
   segmentEmoji: {
-    fontSize: 24,
+    fontSize: 22,
+    marginBottom: 6,
+  },
+  segmentLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#3e2d27',
+    textAlign: 'center',
   },
   button: {
     backgroundColor: '#4a3b35',

@@ -2,22 +2,37 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useAssessment } from '../context/assessmentsContext';
+import { useApi } from '../../utils/api';
 
 export default function GenderScreen() {
   const [selectedGender, setSelectedGender] = useState<'male' | 'female' | null>(null);
   const { setAssessment } = useAssessment();
+  const { saveAssessmentStep } = useApi();
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!selectedGender) {
       Alert.alert('Please select a gender before continuing.');
       return;
     }
 
+    // Update local context immediately
     setAssessment(prev => ({
       ...prev,
       gender: selectedGender,
     }));
 
+    // Persist per-user (backend + AsyncStorage)
+    try {
+      await saveAssessmentStep('gender', selectedGender);
+    } catch (e) {
+      // Non-blocking for UX
+      console.warn('saveAssessmentStep(gender) failed:', e);
+    }
+
+    router.push('/assessment/age');
+  };
+
+  const handleSkip = () => {
     router.push('/assessment/age');
   };
 
@@ -42,6 +57,8 @@ export default function GenderScreen() {
         <TouchableOpacity
           style={[styles.card, selectedGender === 'male' && styles.selectedCard]}
           onPress={() => setSelectedGender('male')}
+          accessibilityRole="button"
+          accessibilityLabel="I am Male"
         >
           <Text style={styles.cardLabel}>I am Male</Text>
           <Text style={styles.cardIcon}>♂️</Text>
@@ -51,6 +68,8 @@ export default function GenderScreen() {
         <TouchableOpacity
           style={[styles.card, selectedGender === 'female' && styles.selectedCard]}
           onPress={() => setSelectedGender('female')}
+          accessibilityRole="button"
+          accessibilityLabel="I am Female"
         >
           <Text style={styles.cardLabel}>I am Female</Text>
           <Text style={styles.cardIcon}>♀️</Text>
@@ -59,10 +78,7 @@ export default function GenderScreen() {
       </View>
 
       {/* Skip Button */}
-      <TouchableOpacity
-        style={styles.skipBtn}
-        onPress={() => router.push('/assessment/age')}
-      >
+      <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
         <Text style={styles.skipText}>Prefer to skip, thanks</Text>
         <Text style={styles.skipX}>✕</Text>
       </TouchableOpacity>
@@ -83,30 +99,16 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 30,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  backText: {
-    fontSize: 22,
-    color: '#3e3e3e',
-  },
-  headerText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#3e3e3e',
-  },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  backText: { fontSize: 22, color: '#3e3e3e' },
+  headerText: { fontSize: 18, fontWeight: '600', color: '#3e3e3e' },
   progressBadge: {
     backgroundColor: '#f3e5db',
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 15,
   },
-  progressText: {
-    fontSize: 12,
-    color: '#5b4234',
-  },
+  progressText: { fontSize: 12, color: '#5b4234' },
   questionText: {
     fontSize: 24,
     fontWeight: '700',
@@ -114,9 +116,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginVertical: 30,
   },
-  cardContainer: {
-    gap: 20,
-  },
+  cardContainer: { gap: 20 },
   card: {
     backgroundColor: '#fff',
     borderRadius: 20,
@@ -129,23 +129,10 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     alignItems: 'center',
   },
-  selectedCard: {
-    borderColor: '#3c3c3c',
-  },
-  cardLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#3e3e3e',
-    marginBottom: 5,
-  },
-  cardIcon: {
-    fontSize: 16,
-    color: '#777',
-    marginBottom: 5,
-  },
-  emoji: {
-    fontSize: 50,
-  },
+  selectedCard: { borderColor: '#3c3c3c' },
+  cardLabel: { fontSize: 16, fontWeight: '600', color: '#3e3e3e', marginBottom: 5 },
+  cardIcon: { fontSize: 16, color: '#777', marginBottom: 5 },
+  emoji: { fontSize: 50 },
   skipBtn: {
     backgroundColor: '#d9e5c9',
     flexDirection: 'row',
@@ -155,15 +142,8 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     marginTop: 30,
   },
-  skipText: {
-    fontSize: 16,
-    color: '#3c5234',
-    fontWeight: '600',
-  },
-  skipX: {
-    fontSize: 18,
-    color: '#3c5234',
-  },
+  skipText: { fontSize: 16, color: '#3c5234', fontWeight: '600' },
+  skipX: { fontSize: 18, color: '#3c5234' },
   continueBtn: {
     backgroundColor: '#4a3b35',
     paddingVertical: 18,
@@ -171,9 +151,5 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     marginTop: 20,
   },
-  continueText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  continueText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });

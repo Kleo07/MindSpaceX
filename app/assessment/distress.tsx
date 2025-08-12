@@ -1,40 +1,55 @@
+// app/assessment/distress.tsx
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
+  Pressable,
   StyleSheet,
   Text,
-  View,
   TouchableOpacity,
-  Pressable,
+  View,
 } from 'react-native';
-import { router } from 'expo-router';
+import { useApi } from '../../utils/api';
 import { useAssessment } from '../context/assessmentsContext';
+
+type DistressChoice = 'yes' | 'no';
 
 const options = [
   {
-    id: 'yes',
+    id: 'yes' as DistressChoice,
     title: 'Yes, one or multiple',
     description: "I'm experiencing physical pain in different places over my body.",
     icon: '✓',
   },
   {
-    id: 'no',
+    id: 'no' as DistressChoice,
     title: 'No Physical Pain At All',
     description: "I'm not experiencing any physical pain in my body at all :)",
     icon: '✕',
   },
 ];
 
-const DistressScreen = () => {
-  const [selected, setSelected] = useState<'yes' | 'no' | null>(null);
+export default function DistressScreen() {
+  const [selected, setSelected] = useState<DistressChoice | null>(null);
   const { setAssessment } = useAssessment();
+  const { saveAssessmentStep } = useApi();
 
-  const handleContinue = () => {
-    if (selected) {
-      setAssessment(prev => ({ ...prev, distress: selected }));
-      router.push('/assessment/sleepquality');
-    } else {
+  const handleContinue = async () => {
+    if (!selected) {
       alert('Please select an option');
+      return;
     }
+
+    // Save to Context (auto-persisted to AsyncStorage by your provider)
+    setAssessment(prev => ({ ...prev, distress: selected }));
+
+    // (Optional) Save to your server too
+    try {
+      await saveAssessmentStep('distress', selected);
+    } catch (e) {
+      console.log('saveAssessmentStep(distress) failed:', e);
+    }
+
+    router.push('/assessment/sleepquality');
   };
 
   return (
@@ -61,19 +76,11 @@ const DistressScreen = () => {
         return (
           <Pressable
             key={item.id}
-            onPress={() => setSelected(item.id as 'yes' | 'no')}
-            style={[
-              styles.optionCard,
-              isSelected && styles.optionCardSelected,
-            ]}
+            onPress={() => setSelected(item.id)}
+            style={[styles.optionCard, isSelected && styles.optionCardSelected]}
           >
             {/* Icon */}
-            <View
-              style={[
-                styles.iconCircle,
-                isSelected && styles.iconCircleSelected,
-              ]}
-            >
+            <View style={[styles.iconCircle, isSelected && styles.iconCircleSelected]}>
               <Text style={[styles.iconText, isSelected && styles.iconTextSelected]}>
                 {item.icon}
               </Text>
@@ -81,12 +88,7 @@ const DistressScreen = () => {
 
             {/* Texts */}
             <View style={styles.optionTextContainer}>
-              <Text
-                style={[
-                  styles.optionTitle,
-                  isSelected && styles.optionTitleSelected,
-                ]}
-              >
+              <Text style={[styles.optionTitle, isSelected && styles.optionTitleSelected]}>
                 {item.title}
               </Text>
               <Text style={styles.optionDesc}>{item.description}</Text>
@@ -106,9 +108,7 @@ const DistressScreen = () => {
       </TouchableOpacity>
     </View>
   );
-};
-
-export default DistressScreen;
+}
 
 const styles = StyleSheet.create({
   container: {
