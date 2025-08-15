@@ -51,10 +51,14 @@
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
+    <key>NSCameraUsageDescription</key>
+    <string>Allow $(PRODUCT_NAME) to access your camera</string>
     <key>NSFaceIDUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your Face ID biometric data.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>This app needs access to your microphone to record your voice.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>This app requires access to your photo library to upload profile photos.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>This app uses speech recognition to convert your voice to text.</string>
     <key>NSUserActivityTypes</key>
